@@ -3,7 +3,6 @@ from collections import Counter
 from pathlib import Path
 
 INPUT_PATH = Path("data/raw/codeforces_problems.json")
-TAGS_OUTPUT_PATH = Path("data/processed/codeforces_tags.json")
 TAG_STATS_OUTPUT_PATH = Path("data/processed/codeforces_tag_stats.json")
 
 
@@ -12,23 +11,23 @@ def load_problems(input_path=INPUT_PATH):
     return data["problems"]
 
 
-def extract_tags(problems):
-    return sorted({
-        tag
-        for problem in problems
-        for tag in problem.get("tags", [])
-    })
-
-
 def count_problems_by_tag(problems):
     tag_counts = Counter()
     for problem in problems:
         tag_counts.update(set(problem.get("tags", [])))
-    return dict(sorted(tag_counts.items()))
+    return tag_counts
 
 
 def build_tag_stats(problems):
     tag_counts = count_problems_by_tag(problems)
+    tags = [
+        {
+            "tag": tag,
+            "problem_count": problem_count,
+        }
+        for tag, problem_count in sorted(tag_counts.items())
+    ]
+
     return {
         "total_problem_count": len(problems),
         "tag_count": len(tag_counts),
@@ -38,7 +37,7 @@ def build_tag_stats(problems):
         "problems_without_tags_count": sum(
             1 for problem in problems if not problem.get("tags")
         ),
-        "tag_problem_counts": tag_counts,
+        "tags": tags,
     }
 
 
@@ -53,13 +52,10 @@ def write_json(output_path, value):
 
 def main():
     problems = load_problems()
-    tags = extract_tags(problems)
     tag_stats = build_tag_stats(problems)
 
-    write_json(TAGS_OUTPUT_PATH, tags)
     write_json(TAG_STATS_OUTPUT_PATH, tag_stats)
 
-    print(f"Saved {len(tags)} tags to {TAGS_OUTPUT_PATH}")
     print(
         "Saved tag stats for "
         f"{tag_stats['total_problem_count']} problems to {TAG_STATS_OUTPUT_PATH}"
