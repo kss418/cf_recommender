@@ -50,15 +50,18 @@ def write_json(output_path, value):
     )
 
 
-def main():
-    problems = load_problems()
+def extract_tag_stats(input_path=INPUT_PATH, output_path=TAG_STATS_OUTPUT_PATH):
+    problems = load_problems(input_path)
     tag_stats = build_tag_stats(problems)
+    write_json(output_path, tag_stats)
+    return Path(output_path), tag_stats
 
-    write_json(TAG_STATS_OUTPUT_PATH, tag_stats)
 
+def main():
+    output_path, tag_stats = extract_tag_stats()
     print(
         "Saved tag stats for "
-        f"{tag_stats['total_problem_count']} problems to {TAG_STATS_OUTPUT_PATH}"
+        f"{tag_stats['total_problem_count']} problems to {output_path}"
     )
 
 
