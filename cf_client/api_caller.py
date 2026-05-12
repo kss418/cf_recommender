@@ -29,8 +29,7 @@ class ApiCaller:
             task = self.queue.get()
             
             try:
-                if task == None:
-                    self.queue.task_done()
+                if task is None:
                     break
                 
                 method, params, result = task
