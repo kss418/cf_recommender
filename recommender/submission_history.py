@@ -2,24 +2,51 @@ import json
 from collections import Counter
 from pathlib import Path
 
-USER_SUBMISSIONS_DIR = Path("data/raw/user_submissions")
+USER_DATA_DIR = Path("data/raw/users")
 ACCEPTED_VERDICT = "OK"
 
 
-def get_user_submissions_path(handle, submissions_dir=USER_SUBMISSIONS_DIR):
-    return Path(submissions_dir) / f"{handle}.json"
+def get_user_data_path(handle, users_dir=USER_DATA_DIR):
+    return Path(users_dir) / f"{handle}.json"
 
 
-def load_user_submissions(handle, submissions_dir=USER_SUBMISSIONS_DIR):
-    submissions_path = get_user_submissions_path(handle, submissions_dir)
-    return load_user_submissions_from_path(submissions_path)
+def load_user_data(handle, users_dir=USER_DATA_DIR):
+    user_data_path = get_user_data_path(handle, users_dir)
+    return load_user_data_from_path(user_data_path)
 
 
-def load_user_submissions_from_path(submissions_path):
-    submissions = json.loads(Path(submissions_path).read_text(encoding="utf-8"))
+def load_user_data_from_path(user_data_path):
+    user_data = json.loads(Path(user_data_path).read_text(encoding="utf-8"))
+
+    if not isinstance(user_data, dict):
+        raise ValueError("User data JSON must contain an object")
+
+    return user_data
+
+
+def load_user_submissions(handle, users_dir=USER_DATA_DIR):
+    user_data = load_user_data(handle, users_dir)
+    return extract_user_submissions(user_data)
+
+
+def load_user_submissions_from_path(user_data_path):
+    user_data = load_user_data_from_path(user_data_path)
+    return extract_user_submissions(user_data)
+
+
+def load_user_info(handle, users_dir=USER_DATA_DIR):
+    return load_user_data(handle, users_dir).get("info", {})
+
+
+def load_user_rating_history(handle, users_dir=USER_DATA_DIR):
+    return load_user_data(handle, users_dir).get("rating_history", [])
+
+
+def extract_user_submissions(user_data):
+    submissions = user_data.get("submissions")
 
     if not isinstance(submissions, list):
-        raise ValueError("User submissions JSON must contain a list")
+        raise ValueError("User data JSON must contain a submissions list")
 
     return submissions
 
