@@ -110,11 +110,13 @@ def recommend(user_id: str):
         "user_data": {
             "output_path": str(save_result["output_path"]),
             "submission_count": save_result["submission_count"],
+            "accepted_problem_count": len(recommendation_result["accepted_problem_keys"]),
             "rating_change_count": save_result["rating_change_count"],
             "current_rating": save_result["current_rating"],
             "max_rating": save_result["max_rating"],
         },
         "user_rating": recommendation_result["user_rating"],
+        "analysis_rating": recommendation_result["analysis_rating"],
         "candidate_count": len(recommendation_result["candidate_problems"]),
         "tag_skills": build_tag_skills(recommendation_result),
         "problems_by_tag": build_problems_by_tag(recommendation_result),

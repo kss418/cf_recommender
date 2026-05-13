@@ -1,20 +1,20 @@
 from data_pipeline.data_loader import get_data_path, load_json
 from recommender.submission_history import (
     ACCEPTED_VERDICT,
+    analyze_submissions_by_problem,
     load_user_info,
     load_user_submissions,
     make_problem_key,
 )
 from recommender.tag_skill import (
-    build_user_tag_skill_stats_map,
+    build_tag_skill_stats_map,
     calculate_difficulty_fit,
     calculate_expected_solve_probability,
+    resolve_user_rating_for_analysis,
 )
 from recommender.tag_tfidf import build_user_tag_tfidf_components
 
 CODEFORCES_PROBLEMS_PATH = get_data_path("codeforces_problems")
-DEFAULT_MIN_RATING_OFFSET = -400
-DEFAULT_MAX_RATING_OFFSET = 200
 DEFAULT_RECOMMENDATION_LIMIT = 20
 DEFAULT_PRIMARY_TAG_QUOTA = 2
 
@@ -66,21 +66,11 @@ def filter_accepted_problems(problems, accepted_problem_keys):
     return unsolved_problems
 
 
-def filter_problems_by_rating_range(
-    problems,
-    user_rating,
-):
-    if user_rating is None:
-        raise ValueError("User rating is required for rating range filtering")
-
-    min_rating = user_rating + DEFAULT_MIN_RATING_OFFSET
-    max_rating = user_rating + DEFAULT_MAX_RATING_OFFSET
-
+def filter_rated_problems(problems):
     return [
         problem
         for problem in problems
         if problem.get("rating") is not None
-        and min_rating <= problem["rating"] <= max_rating
     ]
 
 
@@ -222,27 +212,33 @@ def load_unsolved_problem_candidates(handle):
     submissions = load_user_submission_history(handle)
     user_info = load_user_info(handle)
     user_rating = user_info.get("rating")
+    problem_analysis_by_key = analyze_submissions_by_problem(submissions)
+    analysis_rating = resolve_user_rating_for_analysis(
+        user_rating,
+        problem_analysis_by_key,
+    )
     accepted_problem_keys = collect_accepted_problem_keys(submissions)
     problems = load_problemset()
     unsolved_problems = filter_accepted_problems(problems, accepted_problem_keys)
-    candidate_problems = filter_problems_by_rating_range(
-        unsolved_problems,
-        user_rating,
-    )
+    candidate_problems = filter_rated_problems(unsolved_problems)
     tag_tfidf_score_map = load_tag_tfidf_score_map(
         handle,
     )
-    tag_skill_stats_map = build_user_tag_skill_stats_map(handle)
+    tag_skill_stats_map = build_tag_skill_stats_map(
+        problem_analysis_by_key,
+        analysis_rating,
+    )
     ranked_candidate_problems = rank_problems_by_tfidf(
         candidate_problems,
         tag_tfidf_score_map,
         tag_skill_stats_map,
-        user_rating,
+        analysis_rating,
     )
     recommended_problems = select_diverse_problems(ranked_candidate_problems)
 
     return {
         "user_rating": user_rating,
+        "analysis_rating": analysis_rating,
         "tag_tfidf_score_map": tag_tfidf_score_map,
         "tag_skill_stats_map": tag_skill_stats_map,
         "submissions": submissions,

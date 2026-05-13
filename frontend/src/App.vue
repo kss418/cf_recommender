@@ -90,7 +90,7 @@ async function analyzeHandle() {
           <input
             id="handle"
             v-model="handle"
-            placeholder="TRErnD"
+            autocomplete="off"
             spellcheck="false"
           />
           <button type="submit" :disabled="loading">
@@ -109,16 +109,12 @@ async function analyzeHandle() {
           <strong>{{ analysis.user_id }}</strong>
         </div>
         <div class="metric">
-          <span>Rating</span>
-          <strong>{{ analysis.user_rating ?? "-" }}</strong>
-        </div>
-        <div class="metric">
           <span>Submissions</span>
           <strong>{{ analysis.user_data?.submission_count ?? "-" }}</strong>
         </div>
         <div class="metric">
-          <span>Candidates</span>
-          <strong>{{ analysis.candidate_count }}</strong>
+          <span>AC</span>
+          <strong>{{ analysis.user_data?.accepted_problem_count ?? "-" }}</strong>
         </div>
       </aside>
 
@@ -126,7 +122,7 @@ async function analyzeHandle() {
         <div class="panel-header">
           <div>
             <h2>Tag Skill</h2>
-            <p>estimated lower skill first</p>
+            <p>lower estimated skill first</p>
           </div>
           <span>{{ tagSkills.length }} tags</span>
         </div>
@@ -166,9 +162,8 @@ async function analyzeHandle() {
         <div class="panel-header">
           <div>
             <h2>{{ selectedTag ?? "Problems" }}</h2>
-            <p>Top 10 by recommendation score</p>
+            <p>Top 10 recommendation candidates</p>
           </div>
-          <span>open in CF</span>
         </div>
         <div class="problem-list">
           <a
@@ -179,30 +174,26 @@ async function analyzeHandle() {
             rel="noreferrer"
             target="_blank"
           >
-            <div>
+            <div class="problem-main">
               <div class="problem-title">
                 {{ problem.contest_id }}{{ problem.index }} · {{ problem.name }}
               </div>
+              <div class="problem-stats">
+                <div>
+                  <span>Rating</span>
+                  <strong>{{ problem.rating }}</strong>
+                </div>
+                <div>
+                  <span>Solve probability</span>
+                  <strong>{{ formatPercent(problem.solve_probability) }}</strong>
+                </div>
+                <div>
+                  <span>Recommendation score</span>
+                  <strong>{{ formatNumber(problem.score, 3) }}</strong>
+                </div>
+              </div>
               <div class="problem-tags">
                 <span v-for="tag in problem.tags" :key="tag">{{ tag }}</span>
-              </div>
-            </div>
-            <div class="problem-stats">
-              <div>
-                <span>Problem rating</span>
-                <strong>{{ problem.rating }}</strong>
-              </div>
-              <div>
-                <span>Estimated solve probability</span>
-                <strong>{{ formatPercent(problem.solve_probability) }}</strong>
-              </div>
-              <div>
-                <span>Effective tag skill</span>
-                <strong>{{ formatNumber(problem.effective_rating, 0) }}</strong>
-              </div>
-              <div>
-                <span>Recommendation score</span>
-                <strong>{{ formatNumber(problem.score, 3) }}</strong>
               </div>
             </div>
           </a>
@@ -213,13 +204,38 @@ async function analyzeHandle() {
       </section>
     </section>
 
-    <section v-else class="empty-dashboard">
-      <div class="intro-panel">
-        <p class="eyebrow">Ready</p>
-        <h2>Search a handle to map weak tags and open targeted problems.</h2>
+    <section v-else class="start-screen" aria-hidden="true">
+      <div class="start-summary">
+        <span class="summary-skeleton large"></span>
+        <span class="summary-skeleton"></span>
+        <span class="summary-skeleton"></span>
       </div>
-      <div class="empty-chart" />
-      <div class="empty-list" />
+
+      <div class="start-analysis">
+        <div class="start-panel-header">
+          <span class="skeleton-title"></span>
+          <span class="skeleton-pill"></span>
+        </div>
+        <div class="start-tag-list">
+          <span class="start-tag-row strong"></span>
+          <span class="start-tag-row"></span>
+          <span class="start-tag-row medium"></span>
+          <span class="start-tag-row"></span>
+          <span class="start-tag-row short"></span>
+          <span class="start-tag-row"></span>
+        </div>
+      </div>
+
+      <div class="start-problems">
+        <div class="start-panel-header">
+          <span class="skeleton-title short"></span>
+        </div>
+        <div class="start-problem-list">
+          <span class="start-problem-card"></span>
+          <span class="start-problem-card compact"></span>
+          <span class="start-problem-card"></span>
+        </div>
+      </div>
     </section>
   </main>
 </template>

@@ -14,6 +14,7 @@ DEFAULT_SKILL_SEARCH_MARGIN = 1200
 DEFAULT_SKILL_SEARCH_ITERATIONS = 80
 DEFAULT_TARGET_SOLVE_PROBABILITY = 0.45
 DEFAULT_SOLVE_PROBABILITY_SIGMA = 0.15
+DEFAULT_UNRATED_USER_RATING = 1200
 
 
 def calculate_expected_solve_probability(user_rating, problem_rating):
@@ -44,6 +45,30 @@ def calculate_difficulty_fit(solve_probability):
     probability_gap = solve_probability - DEFAULT_TARGET_SOLVE_PROBABILITY
     denominator = 2 * DEFAULT_SOLVE_PROBABILITY_SIGMA ** 2
     return float(np.exp(-(probability_gap ** 2) / denominator))
+
+
+def collect_solved_problem_ratings(problem_analysis_by_key):
+    return [
+        problem_analysis.get("problem", {}).get("rating")
+        for problem_analysis in problem_analysis_by_key.values()
+        if problem_analysis.get("is_solved")
+        and problem_analysis.get("problem", {}).get("rating") is not None
+    ]
+
+
+def estimate_unrated_user_rating(problem_analysis_by_key):
+    solved_problem_ratings = collect_solved_problem_ratings(problem_analysis_by_key)
+    if not solved_problem_ratings:
+        return float(DEFAULT_UNRATED_USER_RATING)
+
+    return float(np.median(solved_problem_ratings))
+
+
+def resolve_user_rating_for_analysis(user_rating, problem_analysis_by_key):
+    if user_rating is not None:
+        return float(user_rating)
+
+    return estimate_unrated_user_rating(problem_analysis_by_key)
 
 
 def calculate_skill_rating_gradient(skill_rating, problem_results, user_rating):
@@ -105,8 +130,10 @@ def calculate_average_residual(problem_results, skill_rating):
 
 
 def build_tag_skill_stats_map(problem_analysis_by_key, user_rating):
-    if user_rating is None:
-        raise ValueError("User rating is required for tag skill estimation")
+    user_rating = resolve_user_rating_for_analysis(
+        user_rating,
+        problem_analysis_by_key,
+    )
 
     tag_problem_results = {}
     tag_solved_counts = {}
