@@ -109,6 +109,7 @@ def build_tag_skill_stats_map(problem_analysis_by_key, user_rating):
         raise ValueError("User rating is required for tag skill estimation")
 
     tag_problem_results = {}
+    tag_solved_counts = {}
 
     for problem_analysis in problem_analysis_by_key.values():
         problem = problem_analysis.get("problem", {})
@@ -124,15 +125,14 @@ def build_tag_skill_stats_map(problem_analysis_by_key, user_rating):
             tag_problem_results.setdefault(tag, []).append(
                 (problem_rating, actual_result)
             )
+            if problem_analysis.get("is_solved"):
+                tag_solved_counts[tag] = tag_solved_counts.get(tag, 0) + 1
 
     tag_skill_stats_map = {}
     for tag in sorted(tag_problem_results):
         problem_results = tag_problem_results[tag]
         exposure = len(problem_results)
-        solved_count = sum(
-            actual_result
-            for _, actual_result in problem_results
-        )
+        solved_count = tag_solved_counts.get(tag, 0)
         skill_rating = estimate_tag_skill_rating(problem_results, user_rating)
         residual_average = calculate_average_residual(problem_results, user_rating)
         confidence = calculate_tag_skill_confidence(exposure)

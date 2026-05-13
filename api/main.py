@@ -72,7 +72,7 @@ def build_problems_by_tag(recommendation_result):
                 continue
 
             problems_by_tag.setdefault(tag, [])
-            if len(problems_by_tag[tag]) >= 5:
+            if len(problems_by_tag[tag]) >= 10:
                 continue
 
             problems_by_tag[tag].append(
