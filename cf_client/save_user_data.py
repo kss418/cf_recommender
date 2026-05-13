@@ -10,16 +10,12 @@ else:
     from .api_caller import ApiCaller
 
 import argparse
-import json
 from pathlib import Path
 
+from data_pipeline.data_loader import get_data_path, write_json
 
-DEFAULT_OUTPUT_DIR = (
-    Path(__file__).resolve().parents[1]
-    / "data"
-    / "raw"
-    / "users"
-)
+
+DEFAULT_OUTPUT_DIR = get_data_path("users_dir")
 
 
 def build_user_status_params(handle, from_index=None, count=None):
@@ -94,12 +90,7 @@ def save_user_data(
     if output_path is None:
         output_path = DEFAULT_OUTPUT_DIR / f"{handle}.json"
 
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(
-        json.dumps(user_data, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    output_path = write_json(output_path, user_data)
 
     return {
         "output_path": output_path,

@@ -1,0 +1,7 @@
+{
+  "paths": {
+    "codeforces_problems": "data/raw/codeforces_problems.json",
+    "tag_stats": "data/processed/codeforces_tag_stats.json",
+    "users_dir": "data/raw/users"
+  }
+}

@@ -9,28 +9,17 @@ if __package__ is None or __package__ == "":
 else:
     from .api_caller import ApiCaller
 
-import json
-from pathlib import Path
+from data_pipeline.data_loader import get_data_path, write_json
 
 
-DEFAULT_OUTPUT_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "data"
-    / "raw"
-    / "codeforces_problems.json"
-)
+DEFAULT_OUTPUT_PATH = get_data_path("codeforces_problems")
 
 
 def save_all_problems(output_path=DEFAULT_OUTPUT_PATH):
     caller = ApiCaller()
     result = caller.call_api("problemset.problems")
 
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(
-        json.dumps(result, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    output_path = write_json(output_path, result)
 
     problems = result.get("problems", [])
     statistics = result.get("problemStatistics", [])
@@ -42,6 +31,7 @@ def main():
 
     print(f"Saved {problem_count} problems and {statistic_count} statistics")
     print(f"Output: {output_path}")
+
 
 if __name__ == "__main__":
     main()

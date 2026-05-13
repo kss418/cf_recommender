@@ -1,13 +1,12 @@
-import json
-from pathlib import Path
-
 import numpy as np
 
-TAG_STATS_PATH = Path("data/processed/codeforces_tag_stats.json")
+from data_pipeline.data_loader import get_data_path, load_json
+
+TAG_STATS_PATH = get_data_path("tag_stats")
 
 
 def load_tag_stats(tag_stats_path=TAG_STATS_PATH):
-    return json.loads(Path(tag_stats_path).read_text(encoding="utf-8"))
+    return load_json(tag_stats_path)
 
 
 def extract_tag_counts(tag_stats):

@@ -1,12 +1,19 @@
-import json
 from collections import Counter
 from pathlib import Path
 
-USER_DATA_DIR = Path("data/raw/users")
+from data_pipeline.data_loader import (
+    get_data_path,
+    get_user_data_path as get_config_user_data_path,
+    load_json,
+)
+
+USER_DATA_DIR = get_data_path("users_dir")
 ACCEPTED_VERDICT = "OK"
 
 
 def get_user_data_path(handle, users_dir=USER_DATA_DIR):
+    if users_dir == USER_DATA_DIR:
+        return get_config_user_data_path(handle)
     return Path(users_dir) / f"{handle}.json"
 
 
@@ -16,7 +23,7 @@ def load_user_data(handle, users_dir=USER_DATA_DIR):
 
 
 def load_user_data_from_path(user_data_path):
-    user_data = json.loads(Path(user_data_path).read_text(encoding="utf-8"))
+    user_data = load_json(user_data_path)
 
     if not isinstance(user_data, dict):
         raise ValueError("User data JSON must contain an object")

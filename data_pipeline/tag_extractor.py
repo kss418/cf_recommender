@@ -1,13 +1,20 @@
-import json
-from collections import Counter
-from pathlib import Path
+if __package__ is None or __package__ == "":
+    import os
+    import sys
 
-INPUT_PATH = Path("data/raw/codeforces_problems.json")
-TAG_STATS_OUTPUT_PATH = Path("data/processed/codeforces_tag_stats.json")
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.path.insert(0, project_root)
+
+from collections import Counter
+
+from data_pipeline.data_loader import get_data_path, load_json, write_json
+
+INPUT_PATH = get_data_path("codeforces_problems")
+TAG_STATS_OUTPUT_PATH = get_data_path("tag_stats")
 
 
 def load_problems(input_path=INPUT_PATH):
-    data = json.loads(Path(input_path).read_text(encoding="utf-8"))
+    data = load_json(input_path)
     return data["problems"]
 
 
@@ -41,20 +48,11 @@ def build_tag_stats(problems):
     }
 
 
-def write_json(output_path, value):
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(
-        json.dumps(value, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-
-
 def extract_tag_stats(input_path=INPUT_PATH, output_path=TAG_STATS_OUTPUT_PATH):
     problems = load_problems(input_path)
     tag_stats = build_tag_stats(problems)
-    write_json(output_path, tag_stats)
-    return Path(output_path), tag_stats
+    output_path = write_json(output_path, tag_stats)
+    return output_path, tag_stats
 
 
 def main():
