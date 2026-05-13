@@ -1,22 +1,10 @@
 from cf_client.save_all_problem import save_all_problems
-from data_pipeline.data_loader import get_data_path
 from data_pipeline.tag_extractor import extract_tag_stats
 
-RAW_PROBLEMS_PATH = get_data_path("codeforces_problems")
-TAG_STATS_PATH = get_data_path("tag_stats")
 
-
-def run_preprocess_pipeline(
-    raw_problems_path=RAW_PROBLEMS_PATH,
-    tag_stats_path=TAG_STATS_PATH,
-):
-    raw_output_path, problem_count, statistic_count = save_all_problems(
-        raw_problems_path
-    )
-    tag_stats_output_path, tag_stats = extract_tag_stats(
-        input_path=raw_output_path,
-        output_path=tag_stats_path,
-    )
+def run_preprocess_pipeline():
+    raw_output_path, problem_count, statistic_count = save_all_problems()
+    tag_stats_output_path, tag_stats = extract_tag_stats()
 
     return {
         "raw_problems_path": raw_output_path,

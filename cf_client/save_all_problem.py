@@ -15,11 +15,11 @@ from data_pipeline.data_loader import get_data_path, write_json
 DEFAULT_OUTPUT_PATH = get_data_path("codeforces_problems")
 
 
-def save_all_problems(output_path=DEFAULT_OUTPUT_PATH):
+def save_all_problems():
     caller = ApiCaller()
-    result = caller.call_api("problemset.problems")
+    result = caller.call_api("problemset.problems", {})
 
-    output_path = write_json(output_path, result)
+    output_path = write_json(DEFAULT_OUTPUT_PATH, result)
 
     problems = result.get("problems", [])
     statistics = result.get("problemStatistics", [])

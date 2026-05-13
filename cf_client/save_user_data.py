@@ -10,7 +10,6 @@ else:
     from .api_caller import ApiCaller
 
 import argparse
-from pathlib import Path
 
 from data_pipeline.data_loader import get_data_path, write_json
 
@@ -18,22 +17,11 @@ from data_pipeline.data_loader import get_data_path, write_json
 DEFAULT_OUTPUT_DIR = get_data_path("users_dir")
 
 
-def build_user_status_params(handle, from_index=None, count=None):
-    params = {"handle": handle}
-
-    if from_index is not None:
-        params["from"] = from_index
-
-    if count is not None:
-        params["count"] = count
-
-    return params
+def build_user_status_params(handle):
+    return {"handle": handle}
 
 
-def get_user_info(handle, caller=None):
-    if caller is None:
-        caller = ApiCaller()
-
+def get_user_info(handle, caller):
     users = caller.call_api("user.info", {"handles": handle})
     if not users:
         raise RuntimeError(f"Codeforces user.info returned no user: {handle}")
@@ -41,31 +29,20 @@ def get_user_info(handle, caller=None):
     return users[0]
 
 
-def get_user_rating_history(handle, caller=None):
-    if caller is None:
-        caller = ApiCaller()
-
+def get_user_rating_history(handle, caller):
     return caller.call_api("user.rating", {"handle": handle})
 
 
-def get_user_submissions(handle, from_index=None, count=None, caller=None):
-    if caller is None:
-        caller = ApiCaller()
-
-    params = build_user_status_params(handle, from_index, count)
+def get_user_submissions(handle, caller):
+    params = build_user_status_params(handle)
     return caller.call_api("user.status", params)
 
 
-def get_user_data(handle, from_index=None, count=None):
+def get_user_data(handle):
     caller = ApiCaller()
     user_info = get_user_info(handle, caller)
     rating_history = get_user_rating_history(handle, caller)
-    submissions = get_user_submissions(
-        handle,
-        from_index=from_index,
-        count=count,
-        caller=caller,
-    )
+    submissions = get_user_submissions(handle, caller)
 
     return {
         "handle": handle,
@@ -75,21 +52,9 @@ def get_user_data(handle, from_index=None, count=None):
     }
 
 
-def save_user_data(
-    handle,
-    output_path=None,
-    from_index=None,
-    count=None,
-):
-    user_data = get_user_data(
-        handle,
-        from_index=from_index,
-        count=count,
-    )
-
-    if output_path is None:
-        output_path = DEFAULT_OUTPUT_DIR / f"{handle}.json"
-
+def save_user_data(handle):
+    user_data = get_user_data(handle)
+    output_path = DEFAULT_OUTPUT_DIR / f"{handle}.json"
     output_path = write_json(output_path, user_data)
 
     return {
@@ -104,17 +69,9 @@ def save_user_data(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("handle")
-    parser.add_argument("--from", dest="from_index", type=int)
-    parser.add_argument("--count", type=int)
-    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
 
-    result = save_user_data(
-        args.handle,
-        output_path=args.output,
-        from_index=args.from_index,
-        count=args.count,
-    )
+    result = save_user_data(args.handle)
 
     print(f"Saved {result['submission_count']} submissions")
     print(f"Saved {result['rating_change_count']} rating changes")

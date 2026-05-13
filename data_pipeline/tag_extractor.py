@@ -13,8 +13,8 @@ INPUT_PATH = get_data_path("codeforces_problems")
 TAG_STATS_OUTPUT_PATH = get_data_path("tag_stats")
 
 
-def load_problems(input_path=INPUT_PATH):
-    data = load_json(input_path)
+def load_problems():
+    data = load_json(INPUT_PATH)
     return data["problems"]
 
 
@@ -48,10 +48,10 @@ def build_tag_stats(problems):
     }
 
 
-def extract_tag_stats(input_path=INPUT_PATH, output_path=TAG_STATS_OUTPUT_PATH):
-    problems = load_problems(input_path)
+def extract_tag_stats():
+    problems = load_problems()
     tag_stats = build_tag_stats(problems)
-    output_path = write_json(output_path, tag_stats)
+    output_path = write_json(TAG_STATS_OUTPUT_PATH, tag_stats)
     return output_path, tag_stats
 
 

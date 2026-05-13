@@ -1,22 +1,11 @@
 from data_pipeline.data_loader import get_data_path, load_json
 from recommender.submission_history import (
     ACCEPTED_VERDICT,
-    USER_DATA_DIR,
     load_user_info,
     load_user_submissions,
     make_problem_key,
 )
-from recommender.tag_idf import TAG_STATS_PATH
-from recommender.tag_tf import (
-    DEFAULT_HALF_LIFE_DAYS,
-    DEFAULT_MISSING_RATING_WEIGHT,
-    DEFAULT_RATING_SCALE,
-)
-from recommender.tag_tfidf import (
-    DEFAULT_CONFIDENCE_SMOOTHING,
-    DEFAULT_IDF_WEIGHT_CAP,
-    build_user_tag_tfidf_components,
-)
+from recommender.tag_tfidf import build_user_tag_tfidf_components
 
 CODEFORCES_PROBLEMS_PATH = get_data_path("codeforces_problems")
 DEFAULT_MIN_RATING_OFFSET = -400
@@ -25,8 +14,8 @@ DEFAULT_RECOMMENDATION_LIMIT = 20
 DEFAULT_PRIMARY_TAG_QUOTA = 2
 
 
-def load_problemset(problemset_path=CODEFORCES_PROBLEMS_PATH):
-    problemset = load_json(problemset_path)
+def load_problemset():
+    problemset = load_json(CODEFORCES_PROBLEMS_PATH)
     problems = problemset.get("problems")
 
     if not isinstance(problems, list):
@@ -35,8 +24,8 @@ def load_problemset(problemset_path=CODEFORCES_PROBLEMS_PATH):
     return problems
 
 
-def load_user_submission_history(handle, users_dir=USER_DATA_DIR):
-    return load_user_submissions(handle, users_dir)
+def load_user_submission_history(handle):
+    return load_user_submissions(handle)
 
 
 def make_problem_key_from_problem(problem):
@@ -75,14 +64,12 @@ def filter_accepted_problems(problems, accepted_problem_keys):
 def filter_problems_by_rating_range(
     problems,
     user_rating,
-    min_rating_offset=DEFAULT_MIN_RATING_OFFSET,
-    max_rating_offset=DEFAULT_MAX_RATING_OFFSET,
 ):
     if user_rating is None:
         raise ValueError("User rating is required for rating range filtering")
 
-    min_rating = user_rating + min_rating_offset
-    max_rating = user_rating + max_rating_offset
+    min_rating = user_rating + DEFAULT_MIN_RATING_OFFSET
+    max_rating = user_rating + DEFAULT_MAX_RATING_OFFSET
 
     return [
         problem
@@ -92,17 +79,7 @@ def filter_problems_by_rating_range(
     ]
 
 
-def load_tag_tfidf_score_map(
-    handle,
-    users_dir=USER_DATA_DIR,
-    tag_stats_path=TAG_STATS_PATH,
-    user_rating=None,
-    half_life_days=DEFAULT_HALF_LIFE_DAYS,
-    rating_scale=DEFAULT_RATING_SCALE,
-    missing_rating_weight=DEFAULT_MISSING_RATING_WEIGHT,
-    idf_weight_cap=DEFAULT_IDF_WEIGHT_CAP,
-    confidence_smoothing=DEFAULT_CONFIDENCE_SMOOTHING,
-):
+def load_tag_tfidf_score_map(handle):
     (
         tag_names,
         _,
@@ -110,17 +87,7 @@ def load_tag_tfidf_score_map(
         _,
         _,
         tag_score_vector,
-    ) = build_user_tag_tfidf_components(
-        handle,
-        users_dir=users_dir,
-        tag_stats_path=tag_stats_path,
-        user_rating=user_rating,
-        half_life_days=half_life_days,
-        rating_scale=rating_scale,
-        missing_rating_weight=missing_rating_weight,
-        idf_weight_cap=idf_weight_cap,
-        confidence_smoothing=confidence_smoothing,
-    )
+    ) = build_user_tag_tfidf_components(handle)
 
     return {
         tag: float(score)
@@ -184,15 +151,11 @@ def rank_problems_by_tfidf(
     )
 
 
-def select_diverse_problems(
-    ranked_problems,
-    limit=DEFAULT_RECOMMENDATION_LIMIT,
-    primary_tag_quota=DEFAULT_PRIMARY_TAG_QUOTA,
-):
-    if limit <= 0:
+def select_diverse_problems(ranked_problems):
+    if DEFAULT_RECOMMENDATION_LIMIT <= 0:
         raise ValueError("limit must be positive")
 
-    if primary_tag_quota <= 0:
+    if DEFAULT_PRIMARY_TAG_QUOTA <= 0:
         raise ValueError("primary_tag_quota must be positive")
 
     selected_problems = []
@@ -201,7 +164,7 @@ def select_diverse_problems(
     for problem in ranked_problems:
         primary_tag = problem.get("primary_tag")
         selected_count = primary_tag_counts.get(primary_tag, 0)
-        if selected_count >= primary_tag_quota:
+        if selected_count >= DEFAULT_PRIMARY_TAG_QUOTA:
             continue
 
         selected_problem = dict(problem)
@@ -209,59 +172,31 @@ def select_diverse_problems(
         selected_problems.append(selected_problem)
         primary_tag_counts[primary_tag] = selected_count + 1
 
-        if len(selected_problems) >= limit:
+        if len(selected_problems) >= DEFAULT_RECOMMENDATION_LIMIT:
             break
 
     return selected_problems
 
 
-def load_unsolved_problem_candidates(
-    handle,
-    users_dir=USER_DATA_DIR,
-    problemset_path=CODEFORCES_PROBLEMS_PATH,
-    tag_stats_path=TAG_STATS_PATH,
-    min_rating_offset=DEFAULT_MIN_RATING_OFFSET,
-    max_rating_offset=DEFAULT_MAX_RATING_OFFSET,
-    half_life_days=DEFAULT_HALF_LIFE_DAYS,
-    rating_scale=DEFAULT_RATING_SCALE,
-    missing_rating_weight=DEFAULT_MISSING_RATING_WEIGHT,
-    idf_weight_cap=DEFAULT_IDF_WEIGHT_CAP,
-    confidence_smoothing=DEFAULT_CONFIDENCE_SMOOTHING,
-    recommendation_limit=DEFAULT_RECOMMENDATION_LIMIT,
-    primary_tag_quota=DEFAULT_PRIMARY_TAG_QUOTA,
-):
-    submissions = load_user_submission_history(handle, users_dir)
-    user_info = load_user_info(handle, users_dir)
+def load_unsolved_problem_candidates(handle):
+    submissions = load_user_submission_history(handle)
+    user_info = load_user_info(handle)
     user_rating = user_info.get("rating")
     accepted_problem_keys = collect_accepted_problem_keys(submissions)
-    problems = load_problemset(problemset_path)
+    problems = load_problemset()
     unsolved_problems = filter_accepted_problems(problems, accepted_problem_keys)
     candidate_problems = filter_problems_by_rating_range(
         unsolved_problems,
         user_rating,
-        min_rating_offset=min_rating_offset,
-        max_rating_offset=max_rating_offset,
     )
     tag_tfidf_score_map = load_tag_tfidf_score_map(
         handle,
-        users_dir=users_dir,
-        tag_stats_path=tag_stats_path,
-        user_rating=user_rating,
-        half_life_days=half_life_days,
-        rating_scale=rating_scale,
-        missing_rating_weight=missing_rating_weight,
-        idf_weight_cap=idf_weight_cap,
-        confidence_smoothing=confidence_smoothing,
     )
     ranked_candidate_problems = rank_problems_by_tfidf(
         candidate_problems,
         tag_tfidf_score_map,
     )
-    recommended_problems = select_diverse_problems(
-        ranked_candidate_problems,
-        limit=recommendation_limit,
-        primary_tag_quota=primary_tag_quota,
-    )
+    recommended_problems = select_diverse_problems(ranked_candidate_problems)
 
     return {
         "user_rating": user_rating,

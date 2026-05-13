@@ -6,9 +6,10 @@ from .api_result import ApiResult
 
 class ApiCaller:
     BASE_URL = "https://codeforces.com/api"
+    DEFAULT_INTERVAL_SEC = 2.0
 
-    def __init__(self, interval_sec=2.0):
-        self.interval_sec = interval_sec
+    def __init__(self):
+        self.interval_sec = self.DEFAULT_INTERVAL_SEC
         self.queue = queue.Queue()
         self.worker_thread = threading.Thread(target=self.run, daemon=True)
 
@@ -19,7 +20,7 @@ class ApiCaller:
         self.queue.put(None)
         self.worker_thread.join()
 
-    def enqueue(self, method, params=None):
+    def enqueue(self, method, params):
         result = ApiResult()
         self.queue.put((method, params, result))
         return result
@@ -42,7 +43,7 @@ class ApiCaller:
             
             time.sleep(self.interval_sec)
 
-    def call_api(self, method, params=None):
+    def call_api(self, method, params):
         url = f"{self.BASE_URL}/{method}"
         
         try: 

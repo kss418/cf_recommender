@@ -12,15 +12,15 @@ def resolve_project_path(path):
     return PROJECT_ROOT / path
 
 
-def load_data_config(config_path=DEFAULT_CONFIG_PATH):
-    config = load_json(config_path)
+def load_data_config():
+    config = load_json(DEFAULT_CONFIG_PATH)
     if not isinstance(config, dict):
         raise ValueError("Data config JSON must contain an object")
     return config
 
 
-def get_data_path(path_key, config_path=DEFAULT_CONFIG_PATH):
-    config = load_data_config(config_path)
+def get_data_path(path_key):
+    config = load_data_config()
     paths = config.get("paths", {})
     if path_key not in paths:
         raise KeyError(f"Data config missing path: {path_key}")
@@ -41,21 +41,21 @@ def write_json(path, value):
     return path
 
 
-def load_json_data(path_key, config_path=DEFAULT_CONFIG_PATH):
-    return load_json(get_data_path(path_key, config_path))
+def load_json_data(path_key):
+    return load_json(get_data_path(path_key))
 
 
-def write_json_data(path_key, value, config_path=DEFAULT_CONFIG_PATH):
-    return write_json(get_data_path(path_key, config_path), value)
+def write_json_data(path_key, value):
+    return write_json(get_data_path(path_key), value)
 
 
-def get_user_data_path(handle, config_path=DEFAULT_CONFIG_PATH):
-    return get_data_path("users_dir", config_path) / f"{handle}.json"
+def get_user_data_path(handle):
+    return get_data_path("users_dir") / f"{handle}.json"
 
 
-def load_user_data(handle, config_path=DEFAULT_CONFIG_PATH):
-    return load_json(get_user_data_path(handle, config_path))
+def load_user_data(handle):
+    return load_json(get_user_data_path(handle))
 
 
-def write_user_data(handle, user_data, config_path=DEFAULT_CONFIG_PATH):
-    return write_json(get_user_data_path(handle, config_path), user_data)
+def write_user_data(handle, user_data):
+    return write_json(get_user_data_path(handle), user_data)

@@ -14,8 +14,8 @@ class ApiResult:
         self.error = error
         self.event.set()
 
-    def result(self, timeout=None):
-        finished = self.event.wait(timeout)
+    def result(self):
+        finished = self.event.wait()
 
         if not finished:
             return None

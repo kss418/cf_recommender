@@ -1,6 +1,4 @@
 from collections import Counter
-from pathlib import Path
-
 from data_pipeline.data_loader import (
     get_data_path,
     get_user_data_path as get_config_user_data_path,
@@ -11,14 +9,12 @@ USER_DATA_DIR = get_data_path("users_dir")
 ACCEPTED_VERDICT = "OK"
 
 
-def get_user_data_path(handle, users_dir=USER_DATA_DIR):
-    if users_dir == USER_DATA_DIR:
-        return get_config_user_data_path(handle)
-    return Path(users_dir) / f"{handle}.json"
+def get_user_data_path(handle):
+    return get_config_user_data_path(handle)
 
 
-def load_user_data(handle, users_dir=USER_DATA_DIR):
-    user_data_path = get_user_data_path(handle, users_dir)
+def load_user_data(handle):
+    user_data_path = get_user_data_path(handle)
     return load_user_data_from_path(user_data_path)
 
 
@@ -31,8 +27,8 @@ def load_user_data_from_path(user_data_path):
     return user_data
 
 
-def load_user_submissions(handle, users_dir=USER_DATA_DIR):
-    user_data = load_user_data(handle, users_dir)
+def load_user_submissions(handle):
+    user_data = load_user_data(handle)
     return extract_user_submissions(user_data)
 
 
@@ -41,12 +37,12 @@ def load_user_submissions_from_path(user_data_path):
     return extract_user_submissions(user_data)
 
 
-def load_user_info(handle, users_dir=USER_DATA_DIR):
-    return load_user_data(handle, users_dir).get("info", {})
+def load_user_info(handle):
+    return load_user_data(handle).get("info", {})
 
 
-def load_user_rating_history(handle, users_dir=USER_DATA_DIR):
-    return load_user_data(handle, users_dir).get("rating_history", [])
+def load_user_rating_history(handle):
+    return load_user_data(handle).get("rating_history", [])
 
 
 def extract_user_submissions(user_data):
