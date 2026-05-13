@@ -116,37 +116,36 @@ def build_tag_tf_vector(
     normalize=True,
 ):
     tag_index = build_tag_index(tag_names)
-    tag_tf_vector = np.zeros(len(tag_names), dtype=np.float64)
+    weakness_sum_vector = np.zeros(len(tag_names), dtype=np.float64)
+    exposure_vector = np.zeros(len(tag_names), dtype=np.float64)
     problem_keys, decay_weight_vector = build_problem_decay_weight_vector(
         problem_analysis_by_key,
         current_time_seconds=current_time_seconds,
         half_life_days=half_life_days,
     )
 
-    total_weight = 0.0
     for problem_key, decay_weight in zip(problem_keys, decay_weight_vector):
         problem_analysis = problem_analysis_by_key[problem_key]
-        problem_weight = decay_weight * calculate_weakness_signal(problem_analysis)
-        if problem_weight <= 0:
-            continue
+        weakness_signal = calculate_weakness_signal(problem_analysis)
 
-        known_tag_count = 0
         problem_tags = set(problem_analysis.get("problem", {}).get("tags", []))
         for tag in problem_tags:
             index = tag_index.get(tag)
             if index is None:
                 continue
 
-            tag_tf_vector[index] += problem_weight
-            known_tag_count += 1
+            exposure_vector[index] += decay_weight
+            weakness_sum_vector[index] += decay_weight * weakness_signal
 
-        if known_tag_count > 0:
-            total_weight += problem_weight
+    if not normalize:
+        return weakness_sum_vector
 
-    if normalize and total_weight > 0:
-        tag_tf_vector = tag_tf_vector / total_weight
-
-    return tag_tf_vector
+    return np.divide(
+        weakness_sum_vector,
+        exposure_vector,
+        out=np.zeros_like(weakness_sum_vector),
+        where=exposure_vector > 0,
+    )
 
 
 def analyze_user_submissions_by_problem(
