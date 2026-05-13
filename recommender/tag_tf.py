@@ -11,7 +11,7 @@ from recommender.submission_history import (
 
 SECONDS_PER_DAY = 24 * 60 * 60
 DEFAULT_HALF_LIFE_DAYS = 60
-DEFAULT_RATING_SCALE = 300
+DEFAULT_RATING_SCALE = 400
 DEFAULT_MISSING_RATING_WEIGHT = 0.5
 SOLVED_WITHOUT_FAILURE_SIGNAL = 0.0
 SOLVED_WITH_FEW_FAILURES_SIGNAL = 0.3
@@ -102,8 +102,8 @@ def calculate_difficulty_weight(
     if user_rating is None or problem_rating is None:
         return missing_rating_weight
 
-    rating_gap = (user_rating - problem_rating) / rating_scale
-    return 1 / (1 + np.exp(-rating_gap))
+    rating_gap = (problem_rating - user_rating) / rating_scale
+    return 1 / (1 + np.power(10, rating_gap))
 
 
 def build_problem_difficulty_weight_vector(
