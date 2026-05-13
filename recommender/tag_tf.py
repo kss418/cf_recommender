@@ -5,11 +5,14 @@ import numpy as np
 from recommender.submission_history import (
     USER_DATA_DIR,
     analyze_submissions_by_problem,
+    load_user_info,
     load_user_submissions,
 )
 
 SECONDS_PER_DAY = 24 * 60 * 60
 DEFAULT_HALF_LIFE_DAYS = 60
+DEFAULT_RATING_SCALE = 300
+DEFAULT_MISSING_RATING_WEIGHT = 0.5
 SOLVED_WITHOUT_FAILURE_SIGNAL = 0.0
 SOLVED_WITH_FEW_FAILURES_SIGNAL = 0.3
 SOLVED_WITH_MANY_FAILURES_SIGNAL = 0.6
@@ -87,6 +90,46 @@ def build_problem_decay_weight_vector(
     return problem_keys, decay_weight_vector
 
 
+def calculate_difficulty_weight(
+    user_rating,
+    problem_rating,
+    rating_scale=DEFAULT_RATING_SCALE,
+    missing_rating_weight=DEFAULT_MISSING_RATING_WEIGHT,
+):
+    if rating_scale <= 0:
+        raise ValueError("rating_scale must be positive")
+
+    if user_rating is None or problem_rating is None:
+        return missing_rating_weight
+
+    rating_gap = (user_rating - problem_rating) / rating_scale
+    return 1 / (1 + np.exp(-rating_gap))
+
+
+def build_problem_difficulty_weight_vector(
+    problem_analysis_by_key,
+    user_rating,
+    rating_scale=DEFAULT_RATING_SCALE,
+    missing_rating_weight=DEFAULT_MISSING_RATING_WEIGHT,
+):
+    problem_keys = list(problem_analysis_by_key)
+    difficulty_weight_vector = np.array(
+        [
+            calculate_difficulty_weight(
+                user_rating,
+                problem_analysis_by_key[problem_key]
+                .get("problem", {})
+                .get("rating"),
+                rating_scale=rating_scale,
+                missing_rating_weight=missing_rating_weight,
+            )
+            for problem_key in problem_keys
+        ],
+        dtype=np.float64,
+    )
+    return problem_keys, difficulty_weight_vector
+
+
 def calculate_weakness_signal(problem_analysis):
     if not problem_analysis.get("is_solved"):
         return UNSOLVED_SIGNAL
@@ -111,8 +154,11 @@ def build_tag_index(tag_names):
 def build_tag_tf_vector(
     problem_analysis_by_key,
     tag_names,
+    user_rating=None,
     current_time_seconds=None,
     half_life_days=DEFAULT_HALF_LIFE_DAYS,
+    rating_scale=DEFAULT_RATING_SCALE,
+    missing_rating_weight=DEFAULT_MISSING_RATING_WEIGHT,
     normalize=True,
 ):
     tag_index = build_tag_index(tag_names)
@@ -123,10 +169,23 @@ def build_tag_tf_vector(
         current_time_seconds=current_time_seconds,
         half_life_days=half_life_days,
     )
+    difficulty_keys, difficulty_weight_vector = build_problem_difficulty_weight_vector(
+        problem_analysis_by_key,
+        user_rating,
+        rating_scale=rating_scale,
+        missing_rating_weight=missing_rating_weight,
+    )
+    if problem_keys != difficulty_keys:
+        raise ValueError("Problem weight vectors are not aligned")
 
-    for problem_key, decay_weight in zip(problem_keys, decay_weight_vector):
+    for problem_key, decay_weight, difficulty_weight in zip(
+        problem_keys,
+        decay_weight_vector,
+        difficulty_weight_vector,
+    ):
         problem_analysis = problem_analysis_by_key[problem_key]
         weakness_signal = calculate_weakness_signal(problem_analysis)
+        problem_weight = decay_weight * difficulty_weight
 
         problem_tags = set(problem_analysis.get("problem", {}).get("tags", []))
         for tag in problem_tags:
@@ -134,8 +193,8 @@ def build_tag_tf_vector(
             if index is None:
                 continue
 
-            exposure_vector[index] += decay_weight
-            weakness_sum_vector[index] += decay_weight * weakness_signal
+            exposure_vector[index] += problem_weight
+            weakness_sum_vector[index] += problem_weight * weakness_signal
 
     if not normalize:
         return weakness_sum_vector
@@ -161,15 +220,24 @@ def build_user_tag_tf_vector(
     handle,
     tag_names,
     users_dir=USER_DATA_DIR,
+    user_rating=None,
     current_time_seconds=None,
     half_life_days=DEFAULT_HALF_LIFE_DAYS,
+    rating_scale=DEFAULT_RATING_SCALE,
+    missing_rating_weight=DEFAULT_MISSING_RATING_WEIGHT,
     normalize=True,
 ):
+    if user_rating is None:
+        user_rating = load_user_info(handle, users_dir).get("rating")
+
     problem_analysis_by_key = analyze_user_submissions_by_problem(handle, users_dir)
     return build_tag_tf_vector(
         problem_analysis_by_key,
         tag_names,
+        user_rating=user_rating,
         current_time_seconds=current_time_seconds,
         half_life_days=half_life_days,
+        rating_scale=rating_scale,
+        missing_rating_weight=missing_rating_weight,
         normalize=normalize,
     )
