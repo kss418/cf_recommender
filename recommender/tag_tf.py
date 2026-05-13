@@ -161,6 +161,42 @@ def build_tag_tf_vector(
     missing_rating_weight=DEFAULT_MISSING_RATING_WEIGHT,
     normalize=True,
 ):
+    weakness_sum_vector, exposure_vector = build_tag_tf_components(
+        problem_analysis_by_key,
+        tag_names,
+        user_rating=user_rating,
+        current_time_seconds=current_time_seconds,
+        half_life_days=half_life_days,
+        rating_scale=rating_scale,
+        missing_rating_weight=missing_rating_weight,
+    )
+
+    if not normalize:
+        return weakness_sum_vector
+
+    return calculate_tag_tf_ratio_vector(weakness_sum_vector, exposure_vector)
+
+
+def calculate_tag_tf_ratio_vector(weakness_sum_vector, exposure_vector):
+    weakness_sum_vector = np.asarray(weakness_sum_vector, dtype=np.float64)
+    exposure_vector = np.asarray(exposure_vector, dtype=np.float64)
+    return np.divide(
+        weakness_sum_vector,
+        exposure_vector,
+        out=np.zeros_like(weakness_sum_vector),
+        where=exposure_vector > 0,
+    )
+
+
+def build_tag_tf_components(
+    problem_analysis_by_key,
+    tag_names,
+    user_rating=None,
+    current_time_seconds=None,
+    half_life_days=DEFAULT_HALF_LIFE_DAYS,
+    rating_scale=DEFAULT_RATING_SCALE,
+    missing_rating_weight=DEFAULT_MISSING_RATING_WEIGHT,
+):
     tag_index = build_tag_index(tag_names)
     weakness_sum_vector = np.zeros(len(tag_names), dtype=np.float64)
     exposure_vector = np.zeros(len(tag_names), dtype=np.float64)
@@ -196,15 +232,7 @@ def build_tag_tf_vector(
             exposure_vector[index] += problem_weight
             weakness_sum_vector[index] += problem_weight * weakness_signal
 
-    if not normalize:
-        return weakness_sum_vector
-
-    return np.divide(
-        weakness_sum_vector,
-        exposure_vector,
-        out=np.zeros_like(weakness_sum_vector),
-        where=exposure_vector > 0,
-    )
+    return weakness_sum_vector, exposure_vector
 
 
 def analyze_user_submissions_by_problem(
@@ -240,4 +268,29 @@ def build_user_tag_tf_vector(
         rating_scale=rating_scale,
         missing_rating_weight=missing_rating_weight,
         normalize=normalize,
+    )
+
+
+def build_user_tag_tf_components(
+    handle,
+    tag_names,
+    users_dir=USER_DATA_DIR,
+    user_rating=None,
+    current_time_seconds=None,
+    half_life_days=DEFAULT_HALF_LIFE_DAYS,
+    rating_scale=DEFAULT_RATING_SCALE,
+    missing_rating_weight=DEFAULT_MISSING_RATING_WEIGHT,
+):
+    if user_rating is None:
+        user_rating = load_user_info(handle, users_dir).get("rating")
+
+    problem_analysis_by_key = analyze_user_submissions_by_problem(handle, users_dir)
+    return build_tag_tf_components(
+        problem_analysis_by_key,
+        tag_names,
+        user_rating=user_rating,
+        current_time_seconds=current_time_seconds,
+        half_life_days=half_life_days,
+        rating_scale=rating_scale,
+        missing_rating_weight=missing_rating_weight,
     )
