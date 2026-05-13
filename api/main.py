@@ -21,7 +21,11 @@ def format_problem_recommendation(problem):
         "rating": problem.get("rating"),
         "tags": problem.get("tags", []),
         "primary_tag": problem.get("primary_tag"),
-        "score": problem.get("tfidf_score"),
+        "tag_tfidf_score": problem.get("tfidf_score"),
+        "effective_rating": problem.get("effective_rating"),
+        "solve_probability": problem.get("solve_probability"),
+        "difficulty_fit": problem.get("difficulty_fit"),
+        "score": problem.get("final_score"),
         "url": build_problem_url(problem),
     }
 

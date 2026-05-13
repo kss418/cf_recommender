@@ -5,6 +5,11 @@ from recommender.submission_history import (
     load_user_submissions,
     make_problem_key,
 )
+from recommender.tag_skill import (
+    build_user_tag_skill_stats_map,
+    calculate_difficulty_fit,
+    calculate_expected_solve_probability,
+)
 from recommender.tag_tfidf import build_user_tag_tfidf_components
 
 CODEFORCES_PROBLEMS_PATH = get_data_path("codeforces_problems")
@@ -111,6 +116,23 @@ def calculate_problem_tfidf_score(
     return sum(tag_scores) / len(tag_scores)
 
 
+def calculate_problem_effective_rating(
+    problem,
+    user_rating,
+    tag_skill_stats_map,
+):
+    skill_ratings = [
+        tag_skill_stats_map[tag]["skill_rating"]
+        for tag in problem.get("tags", [])
+        if tag in tag_skill_stats_map
+    ]
+
+    if not skill_ratings:
+        return user_rating
+
+    return sum(skill_ratings) / len(skill_ratings)
+
+
 def calculate_problem_primary_tag(
     problem,
     tag_tfidf_score_map,
@@ -130,14 +152,32 @@ def calculate_problem_primary_tag(
 def rank_problems_by_tfidf(
     problems,
     tag_tfidf_score_map,
+    tag_skill_stats_map,
+    user_rating,
 ):
     scored_problems = []
     for problem in problems:
-        scored_problem = dict(problem)
-        scored_problem["tfidf_score"] = calculate_problem_tfidf_score(
+        tfidf_score = calculate_problem_tfidf_score(
             problem,
             tag_tfidf_score_map,
         )
+        effective_rating = calculate_problem_effective_rating(
+            problem,
+            user_rating,
+            tag_skill_stats_map,
+        )
+        solve_probability = calculate_expected_solve_probability(
+            effective_rating,
+            problem.get("rating"),
+        )
+        difficulty_fit = calculate_difficulty_fit(solve_probability)
+
+        scored_problem = dict(problem)
+        scored_problem["tfidf_score"] = tfidf_score
+        scored_problem["effective_rating"] = float(effective_rating)
+        scored_problem["solve_probability"] = solve_probability
+        scored_problem["difficulty_fit"] = difficulty_fit
+        scored_problem["final_score"] = tfidf_score * difficulty_fit
         scored_problem["primary_tag"] = calculate_problem_primary_tag(
             problem,
             tag_tfidf_score_map,
@@ -146,7 +186,7 @@ def rank_problems_by_tfidf(
 
     return sorted(
         scored_problems,
-        key=lambda problem: problem["tfidf_score"],
+        key=lambda problem: problem["final_score"],
         reverse=True,
     )
 
@@ -192,15 +232,19 @@ def load_unsolved_problem_candidates(handle):
     tag_tfidf_score_map = load_tag_tfidf_score_map(
         handle,
     )
+    tag_skill_stats_map = build_user_tag_skill_stats_map(handle)
     ranked_candidate_problems = rank_problems_by_tfidf(
         candidate_problems,
         tag_tfidf_score_map,
+        tag_skill_stats_map,
+        user_rating,
     )
     recommended_problems = select_diverse_problems(ranked_candidate_problems)
 
     return {
         "user_rating": user_rating,
         "tag_tfidf_score_map": tag_tfidf_score_map,
+        "tag_skill_stats_map": tag_skill_stats_map,
         "submissions": submissions,
         "accepted_problem_keys": accepted_problem_keys,
         "problems": problems,
