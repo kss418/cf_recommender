@@ -102,17 +102,25 @@ def analyze_problem_submissions(submissions):
         submission.get("verdict", "UNKNOWN")
         for submission in ordered_submissions
     )
+    is_solved = bool(accepted_submissions)
+    last_submission_time = ordered_submissions[-1].get("creationTimeSeconds")
+    decay_reference_time = (
+        first_accepted_time
+        if is_solved
+        else last_submission_time
+    )
 
     return {
         "problem_key": make_problem_key(ordered_submissions[0]),
         "problem": ordered_submissions[-1].get("problem", {}),
-        "is_solved": bool(accepted_submissions),
+        "is_solved": is_solved,
         "submission_count": len(ordered_submissions),
         "failed_attempt_count": failed_attempt_count,
         "verdict_counts": dict(sorted(verdict_counts.items())),
         "first_submission_time": ordered_submissions[0].get("creationTimeSeconds"),
-        "last_submission_time": ordered_submissions[-1].get("creationTimeSeconds"),
+        "last_submission_time": last_submission_time,
         "first_accepted_time": first_accepted_time,
+        "decay_reference_time": decay_reference_time,
     }
 
 
